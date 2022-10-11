@@ -43,6 +43,7 @@ struct _GstCksumImageSink
 
   /* properties */
   GChecksumType hash;
+  GChecksum *checksum;
   gboolean file_checksum;
   gboolean frame_checksum;
   gboolean plane_checksum;

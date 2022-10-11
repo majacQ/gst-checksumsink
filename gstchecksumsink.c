@@ -181,6 +181,7 @@ gst_cksum_image_sink_init (GstCksumImageSink * checksumsink)
   checksumsink->frame_checksum = TRUE;
   checksumsink->fd = -1;
   checksumsink->eos_after = -1;
+  checksumsink->checksum = g_checksum_new (checksumsink->hash);
 }
 
 static void
@@ -192,6 +193,8 @@ gst_cksum_image_sink_set_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_HASH:
       checksumsink->hash = g_value_get_enum (value);
+      g_checksum_free (checksumsink->checksum);
+      checksumsink->checksum = g_checksum_new (checksumsink->hash);
       break;
     case PROP_FILE_CHECKSUM:
       checksumsink->file_checksum = g_value_get_boolean (value);
@@ -357,6 +360,15 @@ gst_cksum_image_sink_stop (GstBaseSink * sink)
     close(checksumsink->fd);
   }
 
+  {
+    GEnumClass *klass = g_type_class_ref (GST_TYPE_CKSUM_IMAGE_SINK_HASH);
+    g_print ("%s = %s\n",
+        g_enum_get_value (klass, checksumsink->hash)->value_nick,
+        g_checksum_get_string (checksumsink->checksum));
+    g_type_class_unref (klass);
+  }
+  g_checksum_free (checksumsink->checksum);
+
   checksum_raw_file (checksumsink);
 
   g_clear_pointer (&checksumsink->raw_file_name, g_free);
@@ -500,6 +512,8 @@ gst_cksum_image_sink_render (GstBaseSink * sink, GstBuffer * buffer)
       g_free (csum);
     }
   }
+
+  g_checksum_update (checksumsink->checksum, data, size);
 
   if (checksumsink->file_checksum || checksumsink->dump_output) {
     GST_MEMDUMP ("frame", data, size);
